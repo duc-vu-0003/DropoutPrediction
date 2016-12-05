@@ -183,8 +183,6 @@ def importWebLog(df, db, cursor):
            print(error)
            db.rollback()
 
-
-
 def main():
     oper = -1
     while int(oper) != 0:

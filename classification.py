@@ -17,6 +17,7 @@ from sklearn import metrics
 import numpy as np
 from sklearn.multiclass import OneVsRestClassifier
 from utils import Paths
+import itertools
 
 # We run classify ...
 def classifiers(X_train, X_test, y_train, y_test, target_names, dataPath, runType, dataPart):
@@ -51,20 +52,32 @@ def classifiers(X_train, X_test, y_train, y_test, target_names, dataPath, runTyp
         results.append(benchmarkModel(clf, name, X_train, X_test, y_train, y_test, target_names, False, f))
     f.close()
 
-    # # iterate over classifiers
-    # for name, clf in zip(names, classifiers):
-    #     print(name + ":")
-    #     results.append(benchmarkModel(clf, name, X_train, X_test, y_train, y_test, target_names, False, dataPath, runType, dataPart))
-    #     # score = clf.score(X_test, y_test)
-    #     # duration = time() - t0
-    #     # print("Done in %fs" % duration)
-    #     # print()
-    #
-    # indices = np.arange(len(results))
-    # results = [[x[i] for x in results] for i in range(4)]
-    # clf_names, score, training_time, test_time = results
-    # training_time = np.array(training_time) / np.max(training_time)
-    # test_time = np.array(test_time) / np.max(test_time)
+    classes = [0, 1]
+    for clf_descr, confusion_matrix in results:
+        fig = plt.figure(1)
+        plt.imshow(confusion_matrix, interpolation='nearest', cmap=plt.cm.Oranges)
+        thresh = confusion_matrix.max() / 2.
+        plt.title(dataPath + "/" + runType + ": " + clf_descr)
+        plt.colorbar()
+        tick_marks = np.arange(len(classes))
+        plt.xticks(tick_marks, classes, rotation=45)
+        plt.yticks(tick_marks, classes)
+        for i, j in itertools.product(range(confusion_matrix.shape[0]), range(confusion_matrix.shape[1])):
+            plt.text(j, i, confusion_matrix[i, j],
+                     horizontalalignment="center",
+                     color="white" if confusion_matrix[i, j] > thresh else "black")
+        plt.ylabel('True label')
+        plt.xlabel('Predicted label')
+        plt.tight_layout()
+
+        savePath = getImagePath(dataPath, runType, dataPart, clf_descr)
+        saveDir = os.path.dirname(savePath)
+        if not os.path.exists(saveDir):
+            os.makedirs(saveDir)
+        plt.savefig(savePath)
+        plt.close(fig)
+
+    return results
 
 def classifiersMultiLabel(X_train, X_test, y_train, y_test, target_names, dataPath, runType, dataPart):
     names = ["K- Nearest Neighbors", #"Linear SVM", "RBF SVM",
@@ -98,7 +111,60 @@ def classifiersMultiLabel(X_train, X_test, y_train, y_test, target_names, dataPa
         results.append(benchmarkModel(clf, name, X_train, X_test, y_train, y_test, target_names, True, f))
     f.close()
 
-def benchmarkModel(clf, names, X_train, X_test, y_train, y_test, target_names, isCluster, f):
+    # results = [[x[i] for x in results] for i in range(2)]
+
+    classes = [0, 1]
+
+    # fig, ((ax1, ax2, ax3), (ax4, ax5, ax6), (ax7, ax8, ax9) ) = plt.subplots(nrows=3, ncols=3)
+    #
+    # count = 1
+    # for clf_descr, confusion_matrix in results:
+    #     if count == 1:
+    #         plotMatrix(ax1, confusion_matrix, classes, clf_descr)
+    #     elif count == 2:
+    #         plotMatrix(ax2, confusion_matrix, classes, clf_descr)
+
+    for clf_descr, confusion_matrix in results:
+        fig = plt.figure(1)
+        plt.imshow(confusion_matrix, interpolation='nearest', cmap=plt.cm.Oranges)
+        thresh = confusion_matrix.max() / 2.
+        plt.title(dataPath + "/" + runType + ": " + clf_descr)
+        plt.colorbar()
+        tick_marks = np.arange(len(classes))
+        plt.xticks(tick_marks, classes, rotation=45)
+        plt.yticks(tick_marks, classes)
+        for i, j in itertools.product(range(confusion_matrix.shape[0]), range(confusion_matrix.shape[1])):
+            plt.text(j, i, confusion_matrix[i, j],
+                     horizontalalignment="center",
+                     color="white" if confusion_matrix[i, j] > thresh else "black")
+        plt.ylabel('True label')
+        plt.xlabel('Predicted label')
+        plt.tight_layout()
+
+        savePath = getImagePath(dataPath, runType, dataPart, clf_descr)
+        saveDir = os.path.dirname(savePath)
+        if not os.path.exists(saveDir):
+            os.makedirs(saveDir)
+        plt.savefig(savePath)
+        plt.close(fig)
+
+    return results
+
+# def plotMatrix(ax, confusion_matrix, classes, clf_descr):
+#     ax.imshow(confusion_matrix, interpolation='nearest', cmap=plt.cm.Oranges)
+#     thresh = confusion_matrix.max() / 2.
+#     ax.set_title(clf_descr)
+#     tick_marks = np.arange(len(classes))
+#     ax.set_xticks(tick_marks, classes, rotation=45)
+#     ax.set_yticks(tick_marks, classes)
+#     for i, j in itertools.product(range(confusion_matrix.shape[0]), range(confusion_matrix.shape[1])):
+#         ax.set_text(j, i, confusion_matrix[i, j],
+#                  horizontalalignment="center",
+#                  color="white" if confusion_matrix[i, j] > thresh else "black")
+#     ax.set_ylabel('True label')
+#     ax.set_xlabel('Predicted label')
+
+def benchmarkModel(clf, name, X_train, X_test, y_train, y_test, target_names, isCluster, f):
     t0 = time()
     clf.fit(X_train, y_train)
     train_time = time() - t0
@@ -155,8 +221,8 @@ def benchmarkModel(clf, names, X_train, X_test, y_train, y_test, target_names, i
     f.write(str(confusion_matrix[1][0]) + "\t" + str(confusion_matrix[1][1]) + " |    a = 1 \n")
     f.write("\n")
 
-    clf_descr = str(clf).split('(')[0]
-    return clf_descr, score, train_time, test_time
+    # clf_descr = str(clf).split('(')[0]
+    return name, confusion_matrix
 
 # Use for cluster to change dropout label from 0 to 1
 # Use for predict cluster result to change label 1-8 to 0
@@ -185,3 +251,13 @@ def getReportPath(dataPath, run_type, i):
     else:
         path = Paths.linear_report
     return path + "/" + str(i) + "/" + run_type + ".txt"
+
+def getImagePath(dataPath, run_type, i, method):
+    path = ""
+    if dataPath == Paths.fu_v2:
+        path = Paths.raw_report
+    elif dataPath == Paths.data_avg:
+        path = Paths.avg_report
+    else:
+        path = Paths.linear_report
+    return path + "/" + str(i) + "/" + run_type + "/" + method + ".png"

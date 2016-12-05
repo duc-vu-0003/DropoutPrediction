@@ -80,9 +80,42 @@ def predictScore():
 # 2 - Handler missing data with AVG values
 # 3 - Handler missing data by linear regresstion
 def run(run_type):
-    # spitData(Paths.fu_v2)
-    # spitData(Paths.data_avg)
-    spitData(run_type, Paths.data_linear)
+    results1 = []
+    results2 = []
+    results3 = []
+    results4 = []
+
+    results1Raw, results2Raw, results3Raw, results4Raw = spitData(run_type, Paths.fu_v2)
+    # results1Avg, results2Avg, results3Avg, results4Avg = spitData(run_type, Paths.data_avg)
+    # results1Linear, results2Linear, results3Linear, results4Linear = spitData(run_type, Paths.data_linear)
+
+    # results1.append(results1Raw)
+    # results1.append(results1Avg)
+    # results1.append(results1Linear)
+
+    # results2.append(results2Raw)
+    # results2.append(results2Avg)
+    # results2.append(results2Linear)
+
+    # results3.append(results3Raw)
+    # results3.append(results3Avg)
+    # results3.append(results3Linear)
+
+    # results4.append(results4Raw)
+    # results4.append(results4Avg)
+    # results4.append(results4Linear)
+
+    # plt.title("Result")
+    # for clf_descr, confusion_matrix in results1[0]:
+    #     # plot the data observations
+    #     plt.plot(confusion_matrix[0][0],confusion_matrix[1][1],'o')
+    #     # # plot the centroids
+    #     # lines = plt.plot(centroids[i,0],centroids[i,1],'kx')
+    #     # # make the centroid x's bigger
+    #     # plt.setp(lines,ms=15.0)
+    #     # plt.setp(lines,mew=2.0)
+    # plt.show()
+
 
 # We will spit data to 4 folds, each fold will have same numbers of data, same dropout numbers.
 # One for test
@@ -99,6 +132,9 @@ def spitData(run_type, dataPath):
     if os.path.exists(dataPath):
         dataFUV2 = pd.read_csv(dataPath, sep=",", encoding='utf-8', low_memory=False)
 
+    if dataPath == Paths.fu_v2:
+        dataFUV2 = dataFUV2.fillna(method='ffill')
+
     X = dataFUV2.ix[:,1:].values
     y = dataFUV2.ix[:,0]
 
@@ -107,33 +143,89 @@ def spitData(run_type, dataPath):
     # # standardize the data attributes
     # standardized_X = preprocessing.scale(X)
 
+    results1 = []
+    results2 = []
+    results3 = []
+    results4 = []
+
     count = 0
     for train_index, test_index in skf.split(X, y):
         X_train, X_test = X[train_index], X[test_index]
         y_train, y_test = y[train_index], y[test_index]
+        results = []
         if run_type == 0:
-            normalData(X_train, X_test, y_train, y_test, dataFUV2.ix[:,1:].columns.values.tolist(), dataPath, "normal", count)
+            results = normalData(X_train, X_test, y_train, y_test, dataFUV2.ix[:,1:].columns.values.tolist(), dataPath, "normal", count)
+            if count == 0:
+                results1.append(results)
+            elif count == 1:
+                results2.append(results)
+            elif count == 2:
+                results3.append(results)
+            else:
+                results4.append(results)
         elif run_type == 1:
             print("--------------------------------------------")
             print("Run with cloned data:")
-            clonedData(X_train, X_test, y_train, y_test, dataFUV2.ix[:,1:].columns.values.tolist(), dataPath, "cloned", count)
+            results = clonedData(X_train, X_test, y_train, y_test, dataFUV2.ix[:,1:].columns.values.tolist(), dataPath, "cloned", count)
+            if count == 0:
+                results1.append(results)
+            elif count == 1:
+                results2.append(results)
+            elif count == 2:
+                results3.append(results)
+            else:
+                results4.append(results)
             print("--------------------------------------------")
         elif run_type == 2:
             print("--------------------------------------------")
             print("Run with cluster data:")
-            clusterData(X_train, X_test, y_train, y_test, dataFUV2.ix[:,1:].columns.values.tolist(), dataPath, "cluster", count)
+            results = clusterData(X_train, X_test, y_train, y_test, dataFUV2.ix[:,1:].columns.values.tolist(), dataPath, "cluster", count)
+            if count == 0:
+                results1.append(results)
+            elif count == 1:
+                results2.append(results)
+            elif count == 2:
+                results3.append(results)
+            else:
+                results4.append(results)
             print("--------------------------------------------")
         else:
-            normalData(X_train, X_test, y_train, y_test, dataFUV2.ix[:,1:].columns.values.tolist(), dataPath, "normal", count)
+            results = normalData(X_train, X_test, y_train, y_test, dataFUV2.ix[:,1:].columns.values.tolist(), dataPath, "normal", count)
+            if count == 0:
+                results1.append(results)
+            elif count == 1:
+                results2.append(results)
+            elif count == 2:
+                results3.append(results)
+            else:
+                results4.append(results)
             print("--------------------------------------------")
             print("Run with cloned data:")
-            clonedData(X_train, X_test, y_train, y_test, dataFUV2.ix[:,1:].columns.values.tolist(), dataPath, "cloned", count)
+            results = clonedData(X_train, X_test, y_train, y_test, dataFUV2.ix[:,1:].columns.values.tolist(), dataPath, "cloned", count)
+            if count == 0:
+                results1.append(results)
+            elif count == 1:
+                results2.append(results)
+            elif count == 2:
+                results3.append(results)
+            else:
+                results4.append(results)
             print("--------------------------------------------")
             print("--------------------------------------------")
             print("Run with cluster data:")
-            clusterData(X_train, X_test, y_train, y_test, dataFUV2.ix[:,1:].columns.values.tolist(), dataPath, "cluster", count)
+            results = clusterData(X_train, X_test, y_train, y_test, dataFUV2.ix[:,1:].columns.values.tolist(), dataPath, "cluster", count)
+            if count == 0:
+                results1.append(results)
+            elif count == 1:
+                results2.append(results)
+            elif count == 2:
+                results3.append(results)
+            else:
+                results4.append(results)
             print("--------------------------------------------")
+
         count += 1
+    return results1, results2, results3, results4
 
 def itemfreq(a):
     items, inv = np.unique(a, return_inverse=True)
@@ -144,7 +236,7 @@ def itemfreq(a):
 def normalData(X_train, X_test, y_train, y_test, target_names, dataPath, runType, dataPart):
     print("--------------------------------------------")
     print("Run with normal data:")
-    classifiers(X_train, X_test, y_train, y_test, target_names, dataPath, runType, dataPart)
+    return classifiers(X_train, X_test, y_train, y_test, target_names, dataPath, runType, dataPart)
     print("--------------------------------------------")
 
 # With this technique, first we spit data to 2 parts
@@ -191,7 +283,7 @@ def clusterData(X_train, X_test, y_train, y_test, target_names, dataPath, runTyp
     print("Finish cluster training set...")
 
     print("Start cluster test set...")
-    classifiersMultiLabel(X_train, X_test, y_train, y_test, target_names, dataPath, runType, dataPart)
+    return classifiersMultiLabel(X_train, X_test, y_train, y_test, target_names, dataPath, runType, dataPart)
 
 # This is one way to overcome unbalanced data problem
 # We will cloned data of dropout student as soon as drop = non-drop
@@ -230,7 +322,7 @@ def clonedData(X_train, X_test, y_train, y_test, target_names, dataPath, runType
     print("dropOutCount: " + str(dropOutCount))
     print("nonDropOutCount: " + str(nonDropOutCount))
 
-    classifiers(X_train, X_test, y_train, y_test, target_names, dataPath, runType, dataPart)
+    return classifiers(X_train, X_test, y_train, y_test, target_names, dataPath, runType, dataPart)
 
 def getDropOutPosition(y):
     dropOutPos = []
