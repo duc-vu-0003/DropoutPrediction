@@ -11,7 +11,7 @@ import collections
 import encodings
 import re
 from os import path
-import MySQLdb
+# import MySQLdb
 import matplotlib.pyplot as plt
 from sklearn.decomposition import PCA
 from sklearn.cluster import KMeans

@@ -86,35 +86,68 @@ def run(run_type):
     results4 = []
 
     results1Raw, results2Raw, results3Raw, results4Raw = spitData(run_type, Paths.fu_v2)
-    # results1Avg, results2Avg, results3Avg, results4Avg = spitData(run_type, Paths.data_avg)
-    # results1Linear, results2Linear, results3Linear, results4Linear = spitData(run_type, Paths.data_linear)
+    results1Avg, results2Avg, results3Avg, results4Avg = spitData(run_type, Paths.data_avg)
+    results1Linear, results2Linear, results3Linear, results4Linear = spitData(run_type, Paths.data_linear)
 
-    # results1.append(results1Raw)
-    # results1.append(results1Avg)
-    # results1.append(results1Linear)
+    results1.append(results1Raw)
+    results1.append(results1Avg)
+    results1.append(results1Linear)
 
-    # results2.append(results2Raw)
-    # results2.append(results2Avg)
-    # results2.append(results2Linear)
+    results2.append(results2Raw)
+    results2.append(results2Avg)
+    results2.append(results2Linear)
 
-    # results3.append(results3Raw)
-    # results3.append(results3Avg)
-    # results3.append(results3Linear)
+    results3.append(results3Raw)
+    results3.append(results3Avg)
+    results3.append(results3Linear)
 
-    # results4.append(results4Raw)
-    # results4.append(results4Avg)
-    # results4.append(results4Linear)
+    results4.append(results4Raw)
+    results4.append(results4Avg)
+    results4.append(results4Linear)
 
-    # plt.title("Result")
-    # for clf_descr, confusion_matrix in results1[0]:
-    #     # plot the data observations
-    #     plt.plot(confusion_matrix[0][0],confusion_matrix[1][1],'o')
-    #     # # plot the centroids
-    #     # lines = plt.plot(centroids[i,0],centroids[i,1],'kx')
-    #     # # make the centroid x's bigger
-    #     # plt.setp(lines,ms=15.0)
-    #     # plt.setp(lines,mew=2.0)
-    # plt.show()
+    plt.title("Result")
+    for clf_descr, confusion_matrix in results1[0][0]:
+        plt.plot(confusion_matrix[0][0],confusion_matrix[1][1], label=clf_descr, marker='o')
+    plt.legend(loc="lower left")
+    savePath = Paths.report_path + "/" + "result1.png"
+    saveDir = os.path.dirname(savePath)
+    if not os.path.exists(saveDir):
+        os.makedirs(saveDir)
+    plt.savefig(savePath)
+    plt.close(fig)
+
+    plt.title("Result")
+    for clf_descr, confusion_matrix in results2[0][0]:
+        plt.plot(confusion_matrix[0][0],confusion_matrix[1][1], label=clf_descr, marker='o')
+    plt.legend(loc="lower left")
+    savePath = Paths.report_path + "/" + "result2.png"
+    saveDir = os.path.dirname(savePath)
+    if not os.path.exists(saveDir):
+        os.makedirs(saveDir)
+    plt.savefig(savePath)
+    plt.close(fig)
+
+    plt.title("Result")
+    for clf_descr, confusion_matrix in results3[0][0]:
+        plt.plot(confusion_matrix[0][0],confusion_matrix[1][1], label=clf_descr, marker='o')
+    plt.legend(loc="lower left")
+    savePath = Paths.report_path + "/" + "result3.png"
+    saveDir = os.path.dirname(savePath)
+    if not os.path.exists(saveDir):
+        os.makedirs(saveDir)
+    plt.savefig(savePath)
+    plt.close(fig)
+
+    plt.title("Result")
+    for clf_descr, confusion_matrix in results4[0][0]:
+        plt.plot(confusion_matrix[0][0],confusion_matrix[1][1], label=clf_descr, marker='o')
+    plt.legend(loc="lower left")
+    savePath = Paths.report_path + "/" + "result4.png"
+    saveDir = os.path.dirname(savePath)
+    if not os.path.exists(saveDir):
+        os.makedirs(saveDir)
+    plt.savefig(savePath)
+    plt.close(fig)
 
 
 # We will spit data to 4 folds, each fold will have same numbers of data, same dropout numbers.
