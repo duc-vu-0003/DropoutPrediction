@@ -10,14 +10,16 @@ from sklearn.discriminant_analysis import QuadraticDiscriminantAnalysis
 from sklearn.linear_model import LogisticRegression
 import matplotlib.pyplot as plt
 import sys
+import os
 from time import time
 from sklearn.utils.extmath import density
 from sklearn import metrics
 import numpy as np
 from sklearn.multiclass import OneVsRestClassifier
+from utils import Paths
 
 # We run classify ...
-def classifiers(X_train, X_test, y_train, y_test, target_names):
+def classifiers(X_train, X_test, y_train, y_test, target_names, dataPath, runType, dataPart):
     names = ["K- Nearest Neighbors", "Linear SVM", "RBF SVM",
          "Decision Tree", "Random Forest", "Neural Network", "AdaBoost",
          "Naive Bayes", "QDA", "Logistic Regression"]
@@ -35,39 +37,36 @@ def classifiers(X_train, X_test, y_train, y_test, target_names):
             LogisticRegression()]
 
     results = []
+
+    # Write result
+    reportPath = getReportPath(dataPath, runType, dataPart)
+    dir = os.path.dirname(reportPath)
+    if not os.path.exists(dir):
+        os.makedirs(dir)
     # iterate over classifiers
+    f = open(reportPath, 'w')
     for name, clf in zip(names, classifiers):
-        print(name + ":")
-        results.append(benchmarkModel(clf, name, X_train, X_test, y_train, y_test, target_names, False))
-        # score = clf.score(X_test, y_test)
-        # duration = time() - t0
-        # print("Done in %fs" % duration)
-        # print()
+        f.write(name + ": \n")
+        f.write("##############################################\n")
+        results.append(benchmarkModel(clf, name, X_train, X_test, y_train, y_test, target_names, False, f))
+    f.close()
 
-    indices = np.arange(len(results))
-    results = [[x[i] for x in results] for i in range(4)]
-    clf_names, score, training_time, test_time = results
-    training_time = np.array(training_time) / np.max(training_time)
-    test_time = np.array(test_time) / np.max(test_time)
-
-    # plt.figure(figsize=(12, 8))
-    # plt.title("Score")
-    # plt.barh(indices, score, .2, label="score", color='navy')
-    # plt.barh(indices + .3, training_time, .2, label="training time",
-    #      color='c')
-    # plt.barh(indices + .6, test_time, .2, label="test time", color='darkorange')
-    # plt.yticks(())
-    # plt.legend(loc='best')
-    # plt.subplots_adjust(left=.25)
-    # plt.subplots_adjust(top=.95)
-    # plt.subplots_adjust(bottom=.05)
+    # # iterate over classifiers
+    # for name, clf in zip(names, classifiers):
+    #     print(name + ":")
+    #     results.append(benchmarkModel(clf, name, X_train, X_test, y_train, y_test, target_names, False, dataPath, runType, dataPart))
+    #     # score = clf.score(X_test, y_test)
+    #     # duration = time() - t0
+    #     # print("Done in %fs" % duration)
+    #     # print()
     #
-    # for i, c in zip(indices, clf_names):
-    #     plt.text(-.3, i, c)
-    #
-    # plt.show()
+    # indices = np.arange(len(results))
+    # results = [[x[i] for x in results] for i in range(4)]
+    # clf_names, score, training_time, test_time = results
+    # training_time = np.array(training_time) / np.max(training_time)
+    # test_time = np.array(test_time) / np.max(test_time)
 
-def classifiersMultiLabel(X_train, X_test, y_train, y_test, target_names):
+def classifiersMultiLabel(X_train, X_test, y_train, y_test, target_names, dataPath, runType, dataPart):
     names = ["K- Nearest Neighbors", #"Linear SVM", "RBF SVM",
          "Decision Tree", "Random Forest", "Neural Network", "AdaBoost",
          "Naive Bayes", "QDA", "Logistic Regression"]
@@ -85,25 +84,32 @@ def classifiersMultiLabel(X_train, X_test, y_train, y_test, target_names):
             OneVsRestClassifier(LogisticRegression())]
 
     results = []
-    # iterate over classifiers
-    for name, clf in zip(names, classifiers):
-        print(name + ":")
-        results.append(benchmarkModel(clf, name, X_train, X_test, y_train, y_test, target_names, True))
-        # score = clf.score(X_test, y_test)
-        # duration = time() - t0
-        # print("Done in %fs" % duration)
-        # print()
 
-def benchmarkModel(clf, names, X_train, X_test, y_train, y_test, target_names, isCluster):
+    # Write result
+    reportPath = getReportPath(dataPath, runType, dataPart)
+    dir = os.path.dirname(reportPath)
+    if not os.path.exists(dir):
+        os.makedirs(dir)
+    # iterate over classifiers
+    f = open(reportPath, 'w')
+    for name, clf in zip(names, classifiers):
+        f.write(name + ":\n")
+        f.write("##############################################\n")
+        results.append(benchmarkModel(clf, name, X_train, X_test, y_train, y_test, target_names, True, f))
+    f.close()
+
+def benchmarkModel(clf, names, X_train, X_test, y_train, y_test, target_names, isCluster, f):
     t0 = time()
     clf.fit(X_train, y_train)
     train_time = time() - t0
-    print("train time: %0.3fs" % train_time)
+    print("Train time: %0.3fs " % train_time)
+    f.write("Train time: %0.3fs \n" % train_time)
 
     t0 = time()
     pred = clf.predict(X_test)
     test_time = time() - t0
-    print("test time:  %0.3fs" % test_time)
+    print("Test time:  %0.3fs" % test_time)
+    f.write("Test time: %0.3fs \n" % test_time)
 
     if isCluster:
         # Because result of predict contain multi label so we need refactor this result
@@ -113,35 +119,47 @@ def benchmarkModel(clf, names, X_train, X_test, y_train, y_test, target_names, i
     # if names == "Logistic Regression":
     #     print(list(zip(clf.coef_, target_names)))
 
-    #Show accuracy_score when run test with test set
+    # Show accuracy_score when run test with test set
     score = metrics.accuracy_score(y_test, pred)
-    print("accuracy:   %0.3f" % score)
+    print("Correctly Classified Instances:   %0.3f" % score)
+    f.write("Correctly Classified Instances:   %0.3f \n" % score)
 
     #Show precision_score when run test with test set
     score = metrics.precision_score(y_test, pred)
-    print("precision_score:   %0.3f" % score)
+    print("Precision Score:   %0.3f" % score)
+    f.write("Precision Score:   %0.3f \n" % score)
     #
     # #Show recall_score when run test with test set
     score = metrics.recall_score(y_test, pred)
-    print("recall_score:   %0.3f" % score)
+    print("Recall Score:   %0.3f" % score)
+    f.write("Recall Score:   %0.3f \n" % score)
     #
     # #Show f1_score when run test with test set
     score = metrics.f1_score(y_test, pred)
-    print("f1_score:   %0.3f" % score)
+    print("F1 Score:   %0.3f" % score)
+    f.write("F1 Score:   %0.3f \n" % score)
 
     #Show classification report
-    print("classification report:")
+    print("Classification report:")
+    f.write("Classification report: \n")
     print(metrics.classification_report(y_test, pred))
+    f.write(metrics.classification_report(y_test, pred) + "\n")
 
     #Show confusion matrix
-    print("confusion matrix:")
-    print(metrics.confusion_matrix(y_test, pred))
+    print("Confusion Matrix:")
+    f.write("Confusion Matrix: \n")
+    confusion_matrix = metrics.confusion_matrix(y_test, pred)
+    print(confusion_matrix)
+    f.write("a    b   <-- classified as \n")
+    f.write(str(confusion_matrix[0][0]) + "\t" + str(confusion_matrix[0][1]) + " |    a = 0 \n")
+    f.write(str(confusion_matrix[1][0]) + "\t" + str(confusion_matrix[1][1]) + " |    a = 1 \n")
+    f.write("\n")
 
     clf_descr = str(clf).split('(')[0]
     return clf_descr, score, train_time, test_time
 
-# Use for cluster to change dropout label from 1 to 0
-# Use for predict cluster result to change label 1-8 to 1
+# Use for cluster to change dropout label from 0 to 1
+# Use for predict cluster result to change label 1-8 to 0
 def refineDropLabel(y, forPredict):
     y_new = np.zeros(shape=(len(y),))
     count = 0
@@ -156,3 +174,14 @@ def refineDropLabel(y, forPredict):
         count+=1
 
     return y_new
+
+# Use to get report path
+def getReportPath(dataPath, run_type, i):
+    path = ""
+    if dataPath == Paths.fu_v2:
+        path = Paths.raw_report
+    elif dataPath == Paths.data_avg:
+        path = Paths.avg_report
+    else:
+        path = Paths.linear_report
+    return path + "/" + str(i) + "/" + run_type + ".txt"

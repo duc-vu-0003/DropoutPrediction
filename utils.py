@@ -10,7 +10,11 @@ class Paths(object):
   lack_of_village = path.join(data, 'LackOfNativeVillage.csv')
   fu_result_file = path.join(result, 'FU_result.csv')
   eng_result_file = path.join(result, 'vi_result.csv')
-  
+
   fu_v2 = path.join(data, 'fu_v2.csv')
   data_avg = path.join(result, 'data_avg.csv')
   data_linear = path.join(result, 'data_linear.csv')
+  report_path = "report"
+  raw_report = path.join(report_path, "raw_data")
+  avg_report = path.join(report_path, "avg_data")
+  linear_report = path.join(report_path, "linear_data")

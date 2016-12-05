@@ -194,6 +194,7 @@ def main():
         print('2 - Run with normal data')
         print('3 - Run with cloned data')
         print('4 - Run with cluster data')
+        print('5 - Run All')
         print('0 - Exit')
         print('**************************************')
         oper = int(input("Enter your options: "))
@@ -203,11 +204,13 @@ def main():
         elif oper == 1:
             mergeResult()
         elif oper == 2:
-            spitData(0)
+            run(0)
         elif oper == 3:
-            spitData(1)
+            run(1)
         elif oper == 4:
-            spitData(2)
+            run(2)
+        elif oper == 5:
+            run(3)
 
 if __name__ == "__main__":
     main()
