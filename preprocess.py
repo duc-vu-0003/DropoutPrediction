@@ -114,7 +114,7 @@ def run(run_type):
     if not os.path.exists(saveDir):
         os.makedirs(saveDir)
     plt.savefig(savePath)
-    plt.close(fig)
+    # plt.close(fig)
 
     plt.title("Result")
     for clf_descr, confusion_matrix in results2[0][0]:
@@ -125,7 +125,7 @@ def run(run_type):
     if not os.path.exists(saveDir):
         os.makedirs(saveDir)
     plt.savefig(savePath)
-    plt.close(fig)
+    # plt.close(fig)
 
     plt.title("Result")
     for clf_descr, confusion_matrix in results3[0][0]:
@@ -136,7 +136,7 @@ def run(run_type):
     if not os.path.exists(saveDir):
         os.makedirs(saveDir)
     plt.savefig(savePath)
-    plt.close(fig)
+    # plt.close(fig)
 
     plt.title("Result")
     for clf_descr, confusion_matrix in results4[0][0]:
@@ -147,7 +147,7 @@ def run(run_type):
     if not os.path.exists(saveDir):
         os.makedirs(saveDir)
     plt.savefig(savePath)
-    plt.close(fig)
+    # plt.close(fig)
 
 
 # We will spit data to 4 folds, each fold will have same numbers of data, same dropout numbers.
