@@ -16,8 +16,14 @@ from sklearn.model_selection import StratifiedKFold
 from classification import *
 from sklearn.cluster import KMeans
 import matplotlib.pyplot as plt
+from matplotlib.pyplot import cm
 import scipy.spatial.distance as dist
 from operator import itemgetter
+
+results1 = []
+results2 = []
+results3 = []
+results4 = []
 
 # This method use to fill missing values
 # We will overcome missing values with 2 techniques
@@ -80,75 +86,52 @@ def predictScore():
 # 2 - Handler missing data with AVG values
 # 3 - Handler missing data by linear regresstion
 def run(run_type):
-    results1 = []
-    results2 = []
-    results3 = []
-    results4 = []
+    # Init result array
+    del results1[:]
+    del results2[:]
+    del results3[:]
+    del results4[:]
 
-    results1Raw, results2Raw, results3Raw, results4Raw = spitData(run_type, Paths.fu_v2)
-    results1Avg, results2Avg, results3Avg, results4Avg = spitData(run_type, Paths.data_avg)
-    results1Linear, results2Linear, results3Linear, results4Linear = spitData(run_type, Paths.data_linear)
+    # Get result for raw data
+    spitData(run_type, Paths.fu_v2)
+    # Get result for avg data
+    spitData(run_type, Paths.data_avg)
+    # Get result for linear data
+    spitData(run_type, Paths.data_linear)
 
-    results1.append(results1Raw)
-    results1.append(results1Avg)
-    results1.append(results1Linear)
+    showParetoChart(results1, 1)
+    showParetoChart(results2, 2)
+    showParetoChart(results3, 3)
+    showParetoChart(results4, 4)
 
-    results2.append(results2Raw)
-    results2.append(results2Avg)
-    results2.append(results2Linear)
+def showParetoChart(results, i):
+    plt.title("Result for part " + str(i))
+    colors = iter(cm.rainbow(np.linspace(0,1,50)))
+    for result in results:
+        for clf_descr, confusion_matrix in result:
+            tn, fp, fn, tp = confusion_matrix.ravel()
+            drop_acc = 0
+            nondrop_acc = 0
+            if tp > 0:
+                drop_acc = float(tp) / float((tp + fn))
 
-    results3.append(results3Raw)
-    results3.append(results3Avg)
-    results3.append(results3Linear)
+            if tn > 0:
+                nondrop_acc = float(tn) / float(tn + fp)
 
-    results4.append(results4Raw)
-    results4.append(results4Avg)
-    results4.append(results4Linear)
+            c = next(colors)
+            plt.plot(drop_acc * 100, nondrop_acc * 100, label=clf_descr, marker='o', c = c)
 
-    plt.title("Result")
-    for clf_descr, confusion_matrix in results1[0][0]:
-        plt.plot(confusion_matrix[0][0],confusion_matrix[1][1], label=clf_descr, marker='o')
-    plt.legend(loc="lower left")
-    savePath = Paths.report_path + "/" + "result1.png"
+    plt.xlabel('Drop Predict Accuracy (%)')
+    plt.ylabel('Non-drop Predict Accuracy (%)')
+    lgd = plt.legend(loc='upper center', bbox_to_anchor=(0.5, 1.1), ncol=2, columnspacing=1.0, labelspacing=0.0,
+           handletextpad=0.0, handlelength=1.5,
+           fancybox=True)
+    savePath = Paths.report_path + "/" + "result" + str(i) + ".png"
     saveDir = os.path.dirname(savePath)
     if not os.path.exists(saveDir):
         os.makedirs(saveDir)
-    plt.savefig(savePath)
-    # plt.close(fig)
-
-    plt.title("Result")
-    for clf_descr, confusion_matrix in results2[0][0]:
-        plt.plot(confusion_matrix[0][0],confusion_matrix[1][1], label=clf_descr, marker='o')
-    plt.legend(loc="lower left")
-    savePath = Paths.report_path + "/" + "result2.png"
-    saveDir = os.path.dirname(savePath)
-    if not os.path.exists(saveDir):
-        os.makedirs(saveDir)
-    plt.savefig(savePath)
-    # plt.close(fig)
-
-    plt.title("Result")
-    for clf_descr, confusion_matrix in results3[0][0]:
-        plt.plot(confusion_matrix[0][0],confusion_matrix[1][1], label=clf_descr, marker='o')
-    plt.legend(loc="lower left")
-    savePath = Paths.report_path + "/" + "result3.png"
-    saveDir = os.path.dirname(savePath)
-    if not os.path.exists(saveDir):
-        os.makedirs(saveDir)
-    plt.savefig(savePath)
-    # plt.close(fig)
-
-    plt.title("Result")
-    for clf_descr, confusion_matrix in results4[0][0]:
-        plt.plot(confusion_matrix[0][0],confusion_matrix[1][1], label=clf_descr, marker='o')
-    plt.legend(loc="lower left")
-    savePath = Paths.report_path + "/" + "result4.png"
-    saveDir = os.path.dirname(savePath)
-    if not os.path.exists(saveDir):
-        os.makedirs(saveDir)
-    plt.savefig(savePath)
-    # plt.close(fig)
-
+    plt.savefig(savePath, bbox_extra_artists=(lgd,), bbox_inches='tight')
+    plt.close()
 
 # We will spit data to 4 folds, each fold will have same numbers of data, same dropout numbers.
 # One for test
@@ -159,6 +142,7 @@ def run(run_type):
 # Type 0 = normal
 # Type 1 = cloned
 # Type 2 = cluster
+# Type 3 = Run All
 def spitData(run_type, dataPath):
     skf = StratifiedKFold(n_splits=4, shuffle=True, random_state=0) #random_state=None will return diffirent fold everytime
     dataFUV2 = []
@@ -168,6 +152,12 @@ def spitData(run_type, dataPath):
     if dataPath == Paths.fu_v2:
         dataFUV2 = dataFUV2.fillna(method='ffill')
 
+    print("--------------------------------------------")
+    print("--------------------------------------------")
+    print("Processing: " + dataPath)
+    print("--------------------------------------------")
+    print("--------------------------------------------")
+
     X = dataFUV2.ix[:,1:].values
     y = dataFUV2.ix[:,0]
 
@@ -176,89 +166,43 @@ def spitData(run_type, dataPath):
     # # standardize the data attributes
     # standardized_X = preprocessing.scale(X)
 
-    results1 = []
-    results2 = []
-    results3 = []
-    results4 = []
-
     count = 0
     for train_index, test_index in skf.split(X, y):
         X_train, X_test = X[train_index], X[test_index]
         y_train, y_test = y[train_index], y[test_index]
-        results = []
         if run_type == 0:
-            results = normalData(X_train, X_test, y_train, y_test, dataFUV2.ix[:,1:].columns.values.tolist(), dataPath, "normal", count)
-            if count == 0:
-                results1.append(results)
-            elif count == 1:
-                results2.append(results)
-            elif count == 2:
-                results3.append(results)
-            else:
-                results4.append(results)
+            appendData(count, normalData(X_train, X_test, y_train, y_test, dataFUV2.ix[:,1:].columns.values.tolist(), dataPath, "normal", count))
         elif run_type == 1:
             print("--------------------------------------------")
             print("Run with cloned data:")
-            results = clonedData(X_train, X_test, y_train, y_test, dataFUV2.ix[:,1:].columns.values.tolist(), dataPath, "cloned", count)
-            if count == 0:
-                results1.append(results)
-            elif count == 1:
-                results2.append(results)
-            elif count == 2:
-                results3.append(results)
-            else:
-                results4.append(results)
+            appendData(count, clonedData(X_train, X_test, y_train, y_test, dataFUV2.ix[:,1:].columns.values.tolist(), dataPath, "cloned", count))
             print("--------------------------------------------")
         elif run_type == 2:
             print("--------------------------------------------")
             print("Run with cluster data:")
-            results = clusterData(X_train, X_test, y_train, y_test, dataFUV2.ix[:,1:].columns.values.tolist(), dataPath, "cluster", count)
-            if count == 0:
-                results1.append(results)
-            elif count == 1:
-                results2.append(results)
-            elif count == 2:
-                results3.append(results)
-            else:
-                results4.append(results)
+            appendData(count, clusterData(X_train, X_test, y_train, y_test, dataFUV2.ix[:,1:].columns.values.tolist(), dataPath, "cluster", count))
             print("--------------------------------------------")
-        else:
-            results = normalData(X_train, X_test, y_train, y_test, dataFUV2.ix[:,1:].columns.values.tolist(), dataPath, "normal", count)
-            if count == 0:
-                results1.append(results)
-            elif count == 1:
-                results2.append(results)
-            elif count == 2:
-                results3.append(results)
-            else:
-                results4.append(results)
+        elif run_type == 3:
+            appendData(count, normalData(X_train, X_test, y_train, y_test, dataFUV2.ix[:,1:].columns.values.tolist(), dataPath, "normal", count))
             print("--------------------------------------------")
             print("Run with cloned data:")
-            results = clonedData(X_train, X_test, y_train, y_test, dataFUV2.ix[:,1:].columns.values.tolist(), dataPath, "cloned", count)
-            if count == 0:
-                results1.append(results)
-            elif count == 1:
-                results2.append(results)
-            elif count == 2:
-                results3.append(results)
-            else:
-                results4.append(results)
-            print("--------------------------------------------")
+            appendData(count, clonedData(X_train, X_test, y_train, y_test, dataFUV2.ix[:,1:].columns.values.tolist(), dataPath, "cloned", count))
             print("--------------------------------------------")
             print("Run with cluster data:")
-            results = clusterData(X_train, X_test, y_train, y_test, dataFUV2.ix[:,1:].columns.values.tolist(), dataPath, "cluster", count)
-            if count == 0:
-                results1.append(results)
-            elif count == 1:
-                results2.append(results)
-            elif count == 2:
-                results3.append(results)
-            else:
-                results4.append(results)
+            appendData(count, clusterData(X_train, X_test, y_train, y_test, dataFUV2.ix[:,1:].columns.values.tolist(), dataPath, "cluster", count))
             print("--------------------------------------------")
 
         count += 1
-    return results1, results2, results3, results4
+
+def appendData(dataPart, results):
+    if dataPart == 0:
+        results1.append(results)
+    elif dataPart == 1:
+        results2.append(results)
+    elif dataPart == 2:
+        results3.append(results)
+    elif dataPart == 3:
+        results4.append(results)
 
 def itemfreq(a):
     items, inv = np.unique(a, return_inverse=True)

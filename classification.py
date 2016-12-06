@@ -49,7 +49,7 @@ def classifiers(X_train, X_test, y_train, y_test, target_names, dataPath, runTyp
     for name, clf in zip(names, classifiers):
         f.write(name + ": \n")
         f.write("##############################################\n")
-        results.append(benchmarkModel(clf, name, X_train, X_test, y_train, y_test, target_names, False, f, runType))
+        results.append(benchmarkModel(clf, name, X_train, X_test, y_train, y_test, target_names, False, f, runType, dataPath))
     f.close()
 
     classes = [0, 1]
@@ -108,7 +108,7 @@ def classifiersMultiLabel(X_train, X_test, y_train, y_test, target_names, dataPa
     for name, clf in zip(names, classifiers):
         f.write(name + ":\n")
         f.write("##############################################\n")
-        results.append(benchmarkModel(clf, name, X_train, X_test, y_train, y_test, target_names, True, f, runType))
+        results.append(benchmarkModel(clf, name, X_train, X_test, y_train, y_test, target_names, True, f, runType, dataPath))
     f.close()
 
     # results = [[x[i] for x in results] for i in range(2)]
@@ -164,7 +164,7 @@ def classifiersMultiLabel(X_train, X_test, y_train, y_test, target_names, dataPa
 #     ax.set_ylabel('True label')
 #     ax.set_xlabel('Predicted label')
 
-def benchmarkModel(clf, name, X_train, X_test, y_train, y_test, target_names, isCluster, f, runType):
+def benchmarkModel(clf, name, X_train, X_test, y_train, y_test, target_names, isCluster, f, runType, dataPath):
     t0 = time()
     clf.fit(X_train, y_train)
     train_time = time() - t0
@@ -189,6 +189,10 @@ def benchmarkModel(clf, name, X_train, X_test, y_train, y_test, target_names, is
     score = metrics.accuracy_score(y_test, pred)
     print("Correctly Classified Instances:   %0.3f" % score)
     f.write("Correctly Classified Instances:   %0.3f \n" % score)
+
+    score = metrics.accuracy_score(y_test, pred)
+    print("Incorrectly Classified Instances:   %0.3f" % score)
+    f.write("Incorrectly Classified Instances:   %0.3f \n" % score)
 
     #Show precision_score when run test with test set
     score = metrics.precision_score(y_test, pred)
@@ -222,7 +226,7 @@ def benchmarkModel(clf, name, X_train, X_test, y_train, y_test, target_names, is
     f.write("\n")
 
     # clf_descr = str(clf).split('(')[0]
-    return runType + ": " + name, confusion_matrix
+    return dataPath + ": " + runType + ": " + name, confusion_matrix
 
 # Use for cluster to change dropout label from 0 to 1
 # Use for predict cluster result to change label 1-8 to 0
