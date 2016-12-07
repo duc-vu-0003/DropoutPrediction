@@ -99,11 +99,10 @@ def run(run_type):
     # Get result for linear data
     spitData(run_type, Paths.data_linear)
 
-    buildReportDataFrame(results1, 1)
-    # showParetoChart(results1, 1)
-    # showParetoChart(results2, 2)
-    # showParetoChart(results3, 3)
-    # showParetoChart(results4, 4)
+    showParetoChart(results1, 1)
+    showParetoChart(results2, 2)
+    showParetoChart(results3, 3)
+    showParetoChart(results4, 4)
 
 def showParetoChart(results, i):
     plt.title("Result for part " + str(i))
@@ -115,7 +114,8 @@ def showParetoChart(results, i):
     labels = []
     dotItems = []
 
-
+    figure = plt.gcf() # get current figure
+    figure.set_size_inches(6, 8)
     for result in results:
         for clf_descr, confusion_matrix in result:
             tn, fp, fn, tp = confusion_matrix.ravel()
@@ -155,7 +155,7 @@ def showParetoChart(results, i):
     saveDir = os.path.dirname(savePath)
     if not os.path.exists(saveDir):
         os.makedirs(saveDir)
-    plt.savefig(savePath, bbox_extra_artists=(lgd,), bbox_inches='tight') #bbox_extra_artists=(lgd,),
+    plt.savefig(savePath, bbox_extra_artists=(lgd,), bbox_inches='tight', dpi=600) #bbox_extra_artists=(lgd,),
     plt.close()
 
 def pareto_frontier(Xs, Ys, maxX = True, maxY = True):
