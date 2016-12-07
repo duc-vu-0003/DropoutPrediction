@@ -7,6 +7,7 @@ from sklearn.tree import DecisionTreeClassifier
 from sklearn.ensemble import RandomForestClassifier, AdaBoostClassifier
 from sklearn.naive_bayes import GaussianNB
 from sklearn.discriminant_analysis import QuadraticDiscriminantAnalysis
+from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
 from sklearn.linear_model import LogisticRegression
 import matplotlib.pyplot as plt
 import sys
@@ -21,21 +22,19 @@ import itertools
 
 # We run classify ...
 def classifiers(X_train, X_test, y_train, y_test, target_names, dataPath, runType, dataPart):
-    names = ["K- Nearest Neighbors", "Linear SVM", "RBF SVM",
-         "Decision Tree", "Random Forest", "Neural Network", "AdaBoost",
-         "Naive Bayes", "QDA", "Logistic Regression"]
+    names = ["Naive Bayes", "Decision Tree", "K- Nearest Neighbors", "SVM", "Logistic Regression",
+          "Neural Network", "LDA", "QDA", "AdaBoost"]
 
     classifiers = [
+            GaussianNB(),
+            DecisionTreeClassifier(max_depth=10),
             KNeighborsClassifier(3),
             SVC(kernel="linear", C=0.025),
-            SVC(gamma=2, C=1),
-            DecisionTreeClassifier(max_depth=5),
-            RandomForestClassifier(max_depth=5, n_estimators=10, max_features=1),
+            LogisticRegression(),
             MLPClassifier(alpha=1),
-            AdaBoostClassifier(),
-            GaussianNB(),
+            LinearDiscriminantAnalysis(),
             QuadraticDiscriminantAnalysis(),
-            LogisticRegression()]
+            AdaBoostClassifier()]
 
     results = []
 
@@ -80,21 +79,19 @@ def classifiers(X_train, X_test, y_train, y_test, target_names, dataPath, runTyp
     return results
 
 def classifiersMultiLabel(X_train, X_test, y_train, y_test, target_names, dataPath, runType, dataPart):
-    names = ["K- Nearest Neighbors", #"Linear SVM", "RBF SVM",
-         "Decision Tree", "Random Forest", "Neural Network", "AdaBoost",
-         "Naive Bayes", "QDA", "Logistic Regression"]
+    names = ["Naive Bayes", "Decision Tree", "K- Nearest Neighbors", #"SVM",
+          "Logistic Regression", "Neural Network", "LDA", "QDA", "AdaBoost"]
 
     classifiers = [
+            OneVsRestClassifier(GaussianNB()),
+            OneVsRestClassifier(DecisionTreeClassifier(max_depth=10)),
             OneVsRestClassifier(KNeighborsClassifier(3)),
             # OneVsRestClassifier(SVC(kernel="linear", C=0.025)),
-            # OneVsRestClassifier(SVC(gamma=2, C=1)),
-            OneVsRestClassifier(DecisionTreeClassifier(max_depth=5)),
-            OneVsRestClassifier(RandomForestClassifier(max_depth=5, n_estimators=10, max_features=1)),
+            OneVsRestClassifier(LogisticRegression()),
             OneVsRestClassifier(MLPClassifier(alpha=1)),
-            OneVsRestClassifier(AdaBoostClassifier()),
-            OneVsRestClassifier(GaussianNB()),
+            OneVsRestClassifier(LinearDiscriminantAnalysis()),
             OneVsRestClassifier(QuadraticDiscriminantAnalysis()),
-            OneVsRestClassifier(LogisticRegression())]
+            OneVsRestClassifier(AdaBoostClassifier())]
 
     results = []
 

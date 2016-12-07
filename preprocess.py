@@ -93,16 +93,17 @@ def run(run_type):
     del results4[:]
 
     # Get result for raw data
-    spitData(run_type, Paths.fu_v2)
+    # spitData(run_type, Paths.fu_v2)
     # Get result for avg data
     # spitData(run_type, Paths.data_avg)
     # Get result for linear data
-    # spitData(run_type, Paths.data_linear)
+    spitData(run_type, Paths.data_linear)
 
-    showParetoChart(results1, 1)
-    showParetoChart(results2, 2)
-    showParetoChart(results3, 3)
-    showParetoChart(results4, 4)
+    buildReportDataFrame(results1, 1)
+    # showParetoChart(results1, 1)
+    # showParetoChart(results2, 2)
+    # showParetoChart(results3, 3)
+    # showParetoChart(results4, 4)
 
 def showParetoChart(results, i):
     plt.title("Result for part " + str(i))
@@ -110,6 +111,11 @@ def showParetoChart(results, i):
     # plt.gca().set_color_cycle([colormap(i) for i in np.linspace(0, 0.9, 50)])
     Xs = []
     Ys = []
+
+    labels = []
+    dotItems = []
+
+
     for result in results:
         for clf_descr, confusion_matrix in result:
             tn, fp, fn, tp = confusion_matrix.ravel()
@@ -121,28 +127,35 @@ def showParetoChart(results, i):
             if tn > 0:
                 nondrop_acc = float(tn) / float(tn + fp)
 
+            labels.append(clf_descr)
             Xs.append(nondrop_acc * 100)
             Ys.append(drop_acc * 100)
 
-            # plt.plot(drop_acc * 100, nondrop_acc * 100, label=clf_descr, marker='o')
-
     # Find lowest values for drop_acc and highest for nondrop_acc
-    p_front = pareto_frontier(Xs, Ys, maxX = True, maxY = True)
+    p_front = pareto_frontier(Ys, Xs, maxX = True, maxY = True)
     # Plot a scatter graph of all results
-    plt.scatter(Xs, Ys, cmap=colormap)
+    colors = cm.rainbow(np.linspace(0, 1, len(Ys)))
+    for j in range(0, len(Xs)):
+        labelItem = str(j) + " | " + labels[j]
+        dotItems.append(plt.scatter(Ys[j], Xs[j], label=labelItem, color=colors[j]))
+
+        for z in range(0, len(p_front[0])):
+            if p_front[0][z] == Ys[j] and p_front[1][z] == Xs[j]:
+                plt.annotate(j, (Ys[j], Xs[j]))
+
     # Then plot the Pareto frontier on top
     plt.plot(p_front[0], p_front[1], '--', label='Pareto Frontier', alpha=0.5)
 
     plt.xlabel('Drop Predict Accuracy (%)')
     plt.ylabel('Non-drop Predict Accuracy (%)')
-    # lgd = plt.legend(loc='upper center', bbox_to_anchor=(0.5, -0.1), ncol=2, columnspacing=1.0, labelspacing=0.0,
-    #        handletextpad=0.0, handlelength=1.5,
-    #        fancybox=True, fontsize='small')
+    lgd = plt.legend(loc='upper center', bbox_to_anchor=(0.5, -0.1), ncol=2, columnspacing=1.0, labelspacing=0.0,
+           handletextpad=0.0, handlelength=1.5,
+           fancybox=True, fontsize='small')
     savePath = Paths.report_path + "/" + "result" + str(i) + ".png"
     saveDir = os.path.dirname(savePath)
     if not os.path.exists(saveDir):
         os.makedirs(saveDir)
-    plt.savefig(savePath,  bbox_inches='tight') #bbox_extra_artists=(lgd,),
+    plt.savefig(savePath, bbox_extra_artists=(lgd,), bbox_inches='tight') #bbox_extra_artists=(lgd,),
     plt.close()
 
 def pareto_frontier(Xs, Ys, maxX = True, maxY = True):
@@ -416,3 +429,15 @@ def writeDataFrameToText(data):
            f.write(row[0])
            f.close()
            i+=1
+
+def buildReportDataFrame(results, i):
+    # Create report columns
+    columns = ['Name','Confusion Matrix']
+    dfReport = pd.DataFrame(columns=columns)
+    for result in results:
+        for clf_descr, confusion_matrix in result:
+            matrix = str(confusion_matrix[0][0]) + "\t" + str(confusion_matrix[0][1]) + "\n" + str(confusion_matrix[1][0]) + "\t" + str(confusion_matrix[1][1])
+            print("clf_descr " + " " + matrix)
+            dfReport = dfReport.append({'Name': clf_descr, 'Confusion Matrix': matrix }, ignore_index=True)
+
+    dfReport.to_excel('report.xlsx', sheet_name='sheet' + str(i), index=False)
