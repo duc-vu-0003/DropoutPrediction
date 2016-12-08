@@ -19,9 +19,10 @@ import numpy as np
 from sklearn.multiclass import OneVsRestClassifier
 from utils import Paths
 import itertools
+from sklearn.externals import joblib
 
 # We run classify ...
-def classifiers(X_train, X_test, y_train, y_test, target_names, dataPath, runType, dataPart):
+def classifiers(X_train, X_test, y_train, y_test, target_names, dataPath, runType, dataPart, needRebuild):
     names = ["Naive Bayes", "Decision Tree", "K- Nearest Neighbors", "SVM", "Logistic Regression",
           "Neural Network", "LDA", "QDA", "AdaBoost"]
 
@@ -48,15 +49,15 @@ def classifiers(X_train, X_test, y_train, y_test, target_names, dataPath, runTyp
     for name, clf in zip(names, classifiers):
         f.write(name + ": \n")
         f.write("##############################################\n")
-        results.append(benchmarkModel(clf, name, X_train, X_test, y_train, y_test, target_names, False, f, runType, dataPath))
+        results.append(benchmarkModel(clf, name, X_train, X_test, y_train, y_test, target_names, False, f, runType, dataPath, dataPart, needRebuild))
     f.close()
 
     classes = [0, 1]
-    for clf_descr, confusion_matrix in results:
+    for clf_descr, confusion_matrix, title in results:
         fig = plt.figure(1)
         plt.imshow(confusion_matrix, interpolation='nearest', cmap=plt.cm.Oranges)
         thresh = confusion_matrix.max() / 2.
-        plt.title(dataPath + "/" + runType + ": " + clf_descr)
+        plt.title(dataPath + "/" + runType + ": " + title)
         plt.colorbar()
         tick_marks = np.arange(len(classes))
         plt.xticks(tick_marks, classes, rotation=45)
@@ -69,7 +70,7 @@ def classifiers(X_train, X_test, y_train, y_test, target_names, dataPath, runTyp
         plt.xlabel('Predicted label')
         plt.tight_layout()
 
-        savePath = getImagePath(dataPath, runType, dataPart, clf_descr)
+        savePath = getImagePath(dataPath, runType, dataPart, title)
         saveDir = os.path.dirname(savePath)
         if not os.path.exists(saveDir):
             os.makedirs(saveDir)
@@ -78,7 +79,7 @@ def classifiers(X_train, X_test, y_train, y_test, target_names, dataPath, runTyp
 
     return results
 
-def classifiersMultiLabel(X_train, X_test, y_train, y_test, target_names, dataPath, runType, dataPart):
+def classifiersMultiLabel(X_train, X_test, y_train, y_test, target_names, dataPath, runType, dataPart, needRebuild):
     names = ["Naive Bayes", "Decision Tree", "K- Nearest Neighbors", #"SVM",
           "Logistic Regression", "Neural Network", "LDA", "QDA", "AdaBoost"]
 
@@ -105,7 +106,7 @@ def classifiersMultiLabel(X_train, X_test, y_train, y_test, target_names, dataPa
     for name, clf in zip(names, classifiers):
         f.write(name + ":\n")
         f.write("##############################################\n")
-        results.append(benchmarkModel(clf, name, X_train, X_test, y_train, y_test, target_names, True, f, runType, dataPath))
+        results.append(benchmarkModel(clf, name, X_train, X_test, y_train, y_test, target_names, True, f, runType, dataPath, dataPart, needRebuild))
     f.close()
 
     # results = [[x[i] for x in results] for i in range(2)]
@@ -121,11 +122,11 @@ def classifiersMultiLabel(X_train, X_test, y_train, y_test, target_names, dataPa
     #     elif count == 2:
     #         plotMatrix(ax2, confusion_matrix, classes, clf_descr)
 
-    for clf_descr, confusion_matrix in results:
+    for clf_descr, confusion_matrix, title in results:
         fig = plt.figure(1)
         plt.imshow(confusion_matrix, interpolation='nearest', cmap=plt.cm.Oranges)
         thresh = confusion_matrix.max() / 2.
-        plt.title(dataPath + "/" + runType + ": " + clf_descr)
+        plt.title(clf_descr)
         plt.colorbar()
         tick_marks = np.arange(len(classes))
         plt.xticks(tick_marks, classes, rotation=45)
@@ -138,7 +139,7 @@ def classifiersMultiLabel(X_train, X_test, y_train, y_test, target_names, dataPa
         plt.xlabel('Predicted label')
         plt.tight_layout()
 
-        savePath = getImagePath(dataPath, runType, dataPart, clf_descr)
+        savePath = getImagePath(dataPath, runType, dataPart, title)
         saveDir = os.path.dirname(savePath)
         if not os.path.exists(saveDir):
             os.makedirs(saveDir)
@@ -161,12 +162,18 @@ def classifiersMultiLabel(X_train, X_test, y_train, y_test, target_names, dataPa
 #     ax.set_ylabel('True label')
 #     ax.set_xlabel('Predicted label')
 
-def benchmarkModel(clf, name, X_train, X_test, y_train, y_test, target_names, isCluster, f, runType, dataPath):
-    t0 = time()
-    clf.fit(X_train, y_train)
-    train_time = time() - t0
-    print("Train time: %0.3fs " % train_time)
-    f.write("Train time: %0.3fs \n" % train_time)
+def benchmarkModel(clf, name, X_train, X_test, y_train, y_test, target_names, isCluster, f, runType, dataPath, dataPart, needRebuild):
+
+    if needRebuild or loadModel(dataPath, runType, dataPart, name) is None:
+        t0 = time()
+        clf.fit(X_train, y_train)
+        train_time = time() - t0
+        print("Train time: %0.3fs " % train_time)
+        f.write("Train time: %0.3fs \n" % train_time)
+        saveModel(dataPath, runType, dataPart, name, clf)
+    else:
+        print("Load saved model...")
+        clf = loadModel(dataPath, runType, dataPart, name)
 
     t0 = time()
     pred = clf.predict(X_test)
@@ -223,7 +230,7 @@ def benchmarkModel(clf, name, X_train, X_test, y_train, y_test, target_names, is
     f.write("\n")
 
     # clf_descr = str(clf).split('(')[0]
-    return dataPath + ": " + runType + ": " + name, confusion_matrix
+    return dataPath + ": " + runType + ": " + name, confusion_matrix, name
 
 # Use for cluster to change dropout label from 0 to 1
 # Use for predict cluster result to change label 1-8 to 0
@@ -242,8 +249,7 @@ def refineDropLabel(y, forPredict):
 
     return y_new
 
-# Use to get report path
-def getReportPath(dataPath, run_type, i):
+def getDataPath(dataPath):
     path = ""
     if dataPath == Paths.fu_v2:
         path = Paths.raw_report
@@ -251,14 +257,38 @@ def getReportPath(dataPath, run_type, i):
         path = Paths.avg_report
     else:
         path = Paths.linear_report
+    return path
+
+# Use to get report path
+def getReportPath(dataPath, run_type, i):
+    path = getDataPath(dataPath)
     return path + "/" + str(i) + "/" + run_type + ".txt"
 
 def getImagePath(dataPath, run_type, i, method):
+    path = getDataPath(dataPath)
+    return path + "/" + str(i) + "/" + run_type + "/" + method + ".png"
+
+def getModelPath(dataPath, run_type, i, method):
     path = ""
     if dataPath == Paths.fu_v2:
-        path = Paths.raw_report
+        path = Paths.raw_model
     elif dataPath == Paths.data_avg:
-        path = Paths.avg_report
+        path = Paths.avg_model
     else:
-        path = Paths.linear_report
-    return path + "/" + str(i) + "/" + run_type + "/" + method + ".png"
+        path = Paths.linear_model
+    return path + "/" + str(i) + "/" + run_type + "/" + method + ""
+
+def loadModel(dataPath, run_type, i, method):
+    modelPath = getModelPath(dataPath, run_type, i, method)
+    if not os.path.exists(modelPath):
+        return None
+
+    return joblib.load(modelPath)
+
+def saveModel(dataPath, run_type, i, method, clf):
+    modelPath = getModelPath(dataPath, run_type, i, method)
+    saveDir = os.path.dirname(modelPath)
+    if not os.path.exists(saveDir):
+        os.makedirs(saveDir)
+
+    joblib.dump(clf, modelPath)

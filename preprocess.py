@@ -19,6 +19,7 @@ import matplotlib.pyplot as plt
 from matplotlib.pyplot import cm
 import scipy.spatial.distance as dist
 from operator import itemgetter
+import xlsxwriter
 
 results1 = []
 results2 = []
@@ -85,7 +86,7 @@ def predictScore():
 # 1 - Raw data
 # 2 - Handler missing data with AVG values
 # 3 - Handler missing data by linear regresstion
-def run(run_type):
+def run(run_type, needRebuild = False):
     # Init result array
     del results1[:]
     del results2[:]
@@ -93,16 +94,21 @@ def run(run_type):
     del results4[:]
 
     # Get result for raw data
-    # spitData(run_type, Paths.fu_v2)
+    # spitData(run_type, Paths.fu_v2, needRebuild)
     # Get result for avg data
-    # spitData(run_type, Paths.data_avg)
+    # spitData(run_type, Paths.data_avg, needRebuild)
     # Get result for linear data
-    spitData(run_type, Paths.data_linear)
+    spitData(run_type, Paths.data_linear, needRebuild)
 
     showParetoChart(results1, 1)
     showParetoChart(results2, 2)
     showParetoChart(results3, 3)
     showParetoChart(results4, 4)
+
+    buildReportDataFrame(results1, 1)
+    buildReportDataFrame(results2, 2)
+    buildReportDataFrame(results3, 3)
+    buildReportDataFrame(results4, 4)
 
 def showParetoChart(results, i):
     plt.title("Result for part " + str(i))
@@ -117,7 +123,7 @@ def showParetoChart(results, i):
     figure = plt.gcf() # get current figure
     figure.set_size_inches(6, 8)
     for result in results:
-        for clf_descr, confusion_matrix in result:
+        for clf_descr, confusion_matrix, title in result:
             tn, fp, fn, tp = confusion_matrix.ravel()
             drop_acc = 0
             nondrop_acc = 0
@@ -189,7 +195,7 @@ def pareto_frontier(Xs, Ys, maxX = True, maxY = True):
 # Type 1 = cloned
 # Type 2 = cluster
 # Type 3 = Run All
-def spitData(run_type, dataPath):
+def spitData(run_type, dataPath, needRebuild):
     skf = StratifiedKFold(n_splits=4, shuffle=True, random_state=0) #random_state=None will return diffirent fold everytime
     dataFUV2 = []
     if os.path.exists(dataPath):
@@ -217,25 +223,25 @@ def spitData(run_type, dataPath):
         X_train, X_test = X[train_index], X[test_index]
         y_train, y_test = y[train_index], y[test_index]
         if run_type == 0:
-            appendData(count, normalData(X_train, X_test, y_train, y_test, dataFUV2.ix[:,1:].columns.values.tolist(), dataPath, "normal", count))
+            appendData(count, normalData(X_train, X_test, y_train, y_test, dataFUV2.ix[:,1:].columns.values.tolist(), dataPath, "normal", count, needRebuild))
         elif run_type == 1:
             print("--------------------------------------------")
             print("Run with cloned data:")
-            appendData(count, clonedData(X_train, X_test, y_train, y_test, dataFUV2.ix[:,1:].columns.values.tolist(), dataPath, "cloned", count))
+            appendData(count, clonedData(X_train, X_test, y_train, y_test, dataFUV2.ix[:,1:].columns.values.tolist(), dataPath, "cloned", count, needRebuild))
             print("--------------------------------------------")
         elif run_type == 2:
             print("--------------------------------------------")
             print("Run with cluster data:")
-            appendData(count, clusterData(X_train, X_test, y_train, y_test, dataFUV2.ix[:,1:].columns.values.tolist(), dataPath, "cluster", count))
+            appendData(count, clusterData(X_train, X_test, y_train, y_test, dataFUV2.ix[:,1:].columns.values.tolist(), dataPath, "cluster", count, needRebuild))
             print("--------------------------------------------")
         elif run_type == 3:
-            appendData(count, normalData(X_train, X_test, y_train, y_test, dataFUV2.ix[:,1:].columns.values.tolist(), dataPath, "normal", count))
+            appendData(count, normalData(X_train, X_test, y_train, y_test, dataFUV2.ix[:,1:].columns.values.tolist(), dataPath, "normal", count, needRebuild))
             print("--------------------------------------------")
             print("Run with cloned data:")
-            appendData(count, clonedData(X_train, X_test, y_train, y_test, dataFUV2.ix[:,1:].columns.values.tolist(), dataPath, "cloned", count))
+            appendData(count, clonedData(X_train, X_test, y_train, y_test, dataFUV2.ix[:,1:].columns.values.tolist(), dataPath, "cloned", count, needRebuild))
             print("--------------------------------------------")
             print("Run with cluster data:")
-            appendData(count, clusterData(X_train, X_test, y_train, y_test, dataFUV2.ix[:,1:].columns.values.tolist(), dataPath, "cluster", count))
+            appendData(count, clusterData(X_train, X_test, y_train, y_test, dataFUV2.ix[:,1:].columns.values.tolist(), dataPath, "cluster", count, needRebuild))
             print("--------------------------------------------")
 
         count += 1
@@ -256,16 +262,16 @@ def itemfreq(a):
     print(freq)
 
 # Run with raw data
-def normalData(X_train, X_test, y_train, y_test, target_names, dataPath, runType, dataPart):
+def normalData(X_train, X_test, y_train, y_test, target_names, dataPath, runType, dataPart, needRebuild):
     print("--------------------------------------------")
     print("Run with normal data:")
-    return classifiers(X_train, X_test, y_train, y_test, target_names, dataPath, runType, dataPart)
+    return classifiers(X_train, X_test, y_train, y_test, target_names, dataPath, runType, dataPart, needRebuild)
     print("--------------------------------------------")
 
 # With this technique, first we spit data to 2 parts
 # One for dropout
 # One for non dropout (This part use to cluster to n small parts)
-def clusterData(X_train, X_test, y_train, y_test, target_names, dataPath, runType, dataPart):
+def clusterData(X_train, X_test, y_train, y_test, target_names, dataPath, runType, dataPart, needRebuild):
     dropOutPos, nondropOutPos = getDropOutPosition(y_train)
     dropOutCount = len(dropOutPos)
     nonDropOutCount = len(y_train) - dropOutCount
@@ -306,11 +312,11 @@ def clusterData(X_train, X_test, y_train, y_test, target_names, dataPath, runTyp
     print("Finish cluster training set...")
 
     print("Start cluster test set...")
-    return classifiersMultiLabel(X_train, X_test, y_train, y_test, target_names, dataPath, runType, dataPart)
+    return classifiersMultiLabel(X_train, X_test, y_train, y_test, target_names, dataPath, runType, dataPart, needRebuild)
 
 # This is one way to overcome unbalanced data problem
 # We will cloned data of dropout student as soon as drop = non-drop
-def clonedData(X_train, X_test, y_train, y_test, target_names, dataPath, runType, dataPart):
+def clonedData(X_train, X_test, y_train, y_test, target_names, dataPath, runType, dataPart, needRebuild):
     # np.concatenate((a, b), axis=0)
     # Get dropout position
     dropOutPos, nondropOutPos = getDropOutPosition(y_train)
@@ -345,7 +351,7 @@ def clonedData(X_train, X_test, y_train, y_test, target_names, dataPath, runType
     print("dropOutCount: " + str(dropOutCount))
     print("nonDropOutCount: " + str(nonDropOutCount))
 
-    return classifiers(X_train, X_test, y_train, y_test, target_names, dataPath, runType, dataPart)
+    return classifiers(X_train, X_test, y_train, y_test, target_names, dataPath, runType, dataPart, needRebuild)
 
 def getDropOutPosition(y):
     dropOutPos = []
@@ -420,22 +426,12 @@ def cluster(X, k, needSameSize, needShowGraph):
 
     return sameSizeLabels
 
-def writeDataFrameToText(data):
-    for index, row in data.iterrows():
-        if i > len(p):
-           break
-        else:
-           f = open(str(i)+'.txt', 'w')
-           f.write(row[0])
-           f.close()
-           i+=1
-
 def buildReportDataFrame(results, i):
     # Create report columns
     columns = ['Name','Confusion Matrix']
     dfReport = pd.DataFrame(columns=columns)
     for result in results:
-        for clf_descr, confusion_matrix in result:
+        for clf_descr, confusion_matrix, title in result:
             matrix = str(confusion_matrix[0][0]) + "\t" + str(confusion_matrix[0][1]) + "\n" + str(confusion_matrix[1][0]) + "\t" + str(confusion_matrix[1][1])
             print("clf_descr " + " " + matrix)
             dfReport = dfReport.append({'Name': clf_descr, 'Confusion Matrix': matrix }, ignore_index=True)
