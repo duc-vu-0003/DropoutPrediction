@@ -194,9 +194,9 @@ def benchmarkModel(clf, name, X_train, X_test, y_train, y_test, target_names, is
     print("Correctly Classified Instances:   %0.3f" % score)
     f.write("Correctly Classified Instances:   %0.3f \n" % score)
 
-    score = metrics.accuracy_score(y_test, pred)
-    print("Incorrectly Classified Instances:   %0.3f" % score)
-    f.write("Incorrectly Classified Instances:   %0.3f \n" % score)
+    # score = metrics.accuracy_score(y_test, pred)
+    # print("Incorrectly Classified Instances:   %0.3f" % score)
+    # f.write("Incorrectly Classified Instances:   %0.3f \n" % score)
 
     #Show precision_score when run test with test set
     score = metrics.precision_score(y_test, pred)
@@ -226,7 +226,7 @@ def benchmarkModel(clf, name, X_train, X_test, y_train, y_test, target_names, is
     print(confusion_matrix)
     f.write("a    b   <-- classified as \n")
     f.write(str(confusion_matrix[0][0]) + "\t" + str(confusion_matrix[0][1]) + " |    a = 0 \n")
-    f.write(str(confusion_matrix[1][0]) + "\t" + str(confusion_matrix[1][1]) + " |    a = 1 \n")
+    f.write(str(confusion_matrix[1][0]) + "\t" + str(confusion_matrix[1][1]) + " |    b = 1 \n")
     f.write("\n")
 
     # clf_descr = str(clf).split('(')[0]

@@ -20,6 +20,8 @@ from matplotlib.pyplot import cm
 import scipy.spatial.distance as dist
 from operator import itemgetter
 import xlsxwriter
+import datetime
+import string
 
 results1 = []
 results2 = []
@@ -94,21 +96,18 @@ def run(run_type, needRebuild = False):
     del results4[:]
 
     # Get result for raw data
-    # spitData(run_type, Paths.fu_v2, needRebuild)
+    spitData(run_type, Paths.fu_v2, needRebuild)
     # Get result for avg data
-    # spitData(run_type, Paths.data_avg, needRebuild)
+    spitData(run_type, Paths.data_avg, needRebuild)
     # Get result for linear data
     spitData(run_type, Paths.data_linear, needRebuild)
-
+    #
     showParetoChart(results1, 1)
     showParetoChart(results2, 2)
     showParetoChart(results3, 3)
     showParetoChart(results4, 4)
 
-    buildReportDataFrame(results1, 1)
-    buildReportDataFrame(results2, 2)
-    buildReportDataFrame(results3, 3)
-    buildReportDataFrame(results4, 4)
+    buildReportDataFrame()
 
 def showParetoChart(results, i):
     plt.title("Result for part " + str(i))
@@ -426,14 +425,122 @@ def cluster(X, k, needSameSize, needShowGraph):
 
     return sameSizeLabels
 
-def buildReportDataFrame(results, i):
-    # Create report columns
-    columns = ['Name','Confusion Matrix']
-    dfReport = pd.DataFrame(columns=columns)
+def buildReportDataFrame():
+    # Prepare data
+    names = ["Naive Bayes", "Decision Tree", "K- Nearest Neighbors", "SVM", "Logistic Regression",
+          "Neural Network", "LDA", "QDA", "AdaBoost"]
+
+    runTypes = ["Normal", "Cloned", "Cluster"]
+
+    preprocessTypes = ["Raw", "AVG", "Linear Regression"]
+
+    showTypes = ["Confusion Matrix", "Chart"]
+
+    alphabetList = list(string.ascii_uppercase)
+
+    # Create exel file
+    today = datetime.date.today()
+    workbook = xlsxwriter.Workbook('report_' + today.strftime('%Y%m%d') + '.xlsx')
+
+    fillDataForReportFile(workbook, 1, names, runTypes, preprocessTypes, showTypes, alphabetList, results1)
+    fillDataForReportFile(workbook, 2, names, runTypes, preprocessTypes, showTypes, alphabetList, results2)
+    fillDataForReportFile(workbook, 3, names, runTypes, preprocessTypes, showTypes, alphabetList, results3)
+    fillDataForReportFile(workbook, 4, names, runTypes, preprocessTypes, showTypes, alphabetList, results4)
+
+    workbook.close()
+
+def fillDataForReportFile(workbook, i, names, runTypes, preprocessTypes, showTypes, alphabetList, results):
+    # Add sheet
+    worksheet = workbook.add_worksheet("Part " + str(i))
+
+    i = i - 1
+    # Build template for report
+    # Create a format to use in the merged range.
+    merge_format = workbook.add_format({
+        'bold': 1,
+        'border': 1,
+        'align': 'center',
+        'valign': 'vcenter'})
+
+    bold_format = workbook.add_format({'bold': 1, 'border': 1})
+
+    normal_format = workbook.add_format({
+        'border': 1,
+        'align': 'center',
+        'valign': 'vcenter'})
+
+    # Set size for rows and cols
+    worksheet.set_row(0, 50)
+    worksheet.set_column(0, 1, 20)
+
+    # Build template for cols
+    count = 2
+    countTemp = 2
+    for method in names:
+        # Merge 2 cells.
+        worksheet.merge_range("%s1:%s1" % (alphabetList[count], alphabetList[count+1]), method, merge_format)
+        for showType in showTypes:
+            worksheet.set_column(count, count, 30)
+            worksheet.set_column(count+1, count+1, 45)
+            worksheet.write("%s2" % alphabetList[countTemp], showType, merge_format)
+            countTemp += 1
+        count += 2
+
+    # Build template for rows
+    count = 3
+    countTemp = 3
+    for runType in runTypes:
+        worksheet.merge_range("A%d:A%d" % (count, count + 2), runType, merge_format)
+        count += 3
+        for preprocessType in preprocessTypes:
+            worksheet.set_row(countTemp - 1, 250)
+            worksheet.write("B%d" % countTemp, preprocessType, merge_format)
+            countTemp += 1
+
+    image_width = 800.0
+    image_height = 600.0
+
+    image_cell_width = 330.0
+    image_cell_height = 247.5
+    x_scale = float(image_cell_width)/float(image_width)
+    y_scale = float(image_cell_height)/float(image_height)
+
+    # Start fill results
+    count = 2
     for result in results:
         for clf_descr, confusion_matrix, title in result:
-            matrix = str(confusion_matrix[0][0]) + "\t" + str(confusion_matrix[0][1]) + "\n" + str(confusion_matrix[1][0]) + "\t" + str(confusion_matrix[1][1])
-            print("clf_descr " + " " + matrix)
-            dfReport = dfReport.append({'Name': clf_descr, 'Confusion Matrix': matrix }, ignore_index=True)
+            matrix = "a\tb\t<-- classified as \n"
+            matrix = matrix + str(confusion_matrix[0][0]) + "\t" + str(confusion_matrix[0][1]) + "\t |    a = 0 \n"
+            matrix = matrix + str(confusion_matrix[1][0]) + "\t" + str(confusion_matrix[1][1]) + "\t |    b = 1 \n"
+            row, imagePath = getResultType(clf_descr, i, title)
 
-    dfReport.to_excel('report.xlsx', sheet_name='sheet' + str(i), index=False)
+            if count > 19:
+                count = 2
+
+            # We dont have result for SVM of cluster
+            if (row == 9 or row == 10 or row == 11) and title == 'Logistic Regression':
+                count += 2
+
+            worksheet.write("%s%d" % (alphabetList[count], row), matrix, normal_format)
+            worksheet.insert_image("%s%d" % (alphabetList[count + 1], row), imagePath, {'x_scale': x_scale, 'y_scale': y_scale})
+            count += 2
+
+def getResultType(clf_descr, i, title):
+    if "fu_v2" in clf_descr and "normal" in clf_descr:
+        return 3, getImagePath(Paths.fu_v2, "normal", i, title)
+    elif "avg" in clf_descr and "normal" in clf_descr:
+        return 4, getImagePath(Paths.data_avg, "normal", i, title)
+    elif "linear" in clf_descr and "normal" in clf_descr:
+        return 5, getImagePath(Paths.data_linear, "normal", i, title)
+    elif "fu_v2" in clf_descr and "clone" in clf_descr:
+        return 6, getImagePath(Paths.fu_v2, "cloned", i, title)
+    elif "avg" in clf_descr and "clone" in clf_descr:
+        return 7, getImagePath(Paths.data_avg, "cloned", i, title)
+    elif "linear" in clf_descr and "clone" in clf_descr:
+        return 8, getImagePath(Paths.data_linear, "cloned", i, title)
+    elif "fu_v2" in clf_descr and "cluster" in clf_descr:
+        return 9, getImagePath(Paths.fu_v2, "cluster", i, title)
+    elif "avg" in clf_descr and "cluster" in clf_descr:
+        return 10, getImagePath(Paths.data_avg, "cluster", i, title)
+    elif "linear" in clf_descr and "cluster" in clf_descr:
+        return 11, getImagePath(Paths.data_linear, "cluster", i, title)
