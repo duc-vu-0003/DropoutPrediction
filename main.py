@@ -15,7 +15,6 @@ from os import path
 import matplotlib.pyplot as plt
 from sklearn.decomposition import PCA
 from sklearn.cluster import KMeans
-from sklearn.cross_validation import train_test_split
 from sklearn.linear_model import LinearRegression
 from sklearn.metrics import mean_squared_error
 from sklearn.ensemble import RandomForestRegressor
@@ -193,6 +192,8 @@ def main():
         print('3 - Run with cloned data')
         print('4 - Run with cluster data')
         print('5 - Run All')
+        print('6 - Report Missing Data')
+        print('7 - Report Unbalanced Data')
         print('0 - Exit')
         print('**************************************')
         oper = int(input("Enter your options: "))
@@ -209,6 +210,10 @@ def main():
             run(2)
         elif oper == 5:
             run(3)
+        elif oper == 6:
+            reportMissingData()
+        elif oper == 7:
+            reportUnbalanceData()
 
 if __name__ == "__main__":
     main()

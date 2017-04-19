@@ -22,11 +22,13 @@ from operator import itemgetter
 import xlsxwriter
 import datetime
 import string
+from sklearn.metrics.pairwise import pairwise_distances_argmin
 
 results1 = []
 results2 = []
 results3 = []
 results4 = []
+resultsAvg = []
 
 # This method use to fill missing values
 # We will overcome missing values with 2 techniques
@@ -109,8 +111,14 @@ def run(run_type, needRebuild = False):
 
     buildReportDataFrame()
 
+    showParetoChart(resultsAvg, 5)
+
 def showParetoChart(results, i):
-    plt.title("Result for part " + str(i))
+    if i == 5:
+        plt.title("Average of result:")
+    else:
+        plt.title("Result for part " + str(i))
+
     colormap = cm.gist_ncar
     # plt.gca().set_color_cycle([colormap(i) for i in np.linspace(0, 0.9, 50)])
     Xs = []
@@ -258,7 +266,7 @@ def appendData(dataPart, results):
 def itemfreq(a):
     items, inv = np.unique(a, return_inverse=True)
     freq = np.bincount(inv)
-    print(freq)
+    return items, freq
 
 # Run with raw data
 def normalData(X_train, X_test, y_train, y_test, target_names, dataPath, runType, dataPart, needRebuild):
@@ -277,6 +285,8 @@ def clusterData(X_train, X_test, y_train, y_test, target_names, dataPath, runTyp
     estimate_cluster = nonDropOutCount / dropOutCount
     if dropOutCount*estimate_cluster < nonDropOutCount:
         estimate_cluster+=1
+
+    print("****************************************")
     print("Estimate cluster number: " + str(estimate_cluster))
 
     # We will get non-drop list for cluster
@@ -306,11 +316,15 @@ def clusterData(X_train, X_test, y_train, y_test, target_names, dataPath, runTyp
     # Join cluster result to training set
     # We will join non-drop part with dropout part
     # We also join same size labels with dropout labels
+
     X_train = np.concatenate((X_train_non_drop, X_train_drop), axis=0)
     y_train = np.concatenate((sameSizeLabels, y_train_drop), axis=0)
+
+    print('Total instances: ' + str(len(y_train)))
+    showClusterResult(y_train)
+
     print("Finish cluster training set...")
 
-    print("Start cluster test set...")
     return classifiersMultiLabel(X_train, X_test, y_train, y_test, target_names, dataPath, runType, dataPart, needRebuild)
 
 # This is one way to overcome unbalanced data problem
@@ -318,13 +332,30 @@ def clusterData(X_train, X_test, y_train, y_test, target_names, dataPath, runTyp
 def clonedData(X_train, X_test, y_train, y_test, target_names, dataPath, runType, dataPart, needRebuild):
     # np.concatenate((a, b), axis=0)
     # Get dropout position
+
+    dropOutPosTest, nondropOutPosTest = getDropOutPosition(y_test)
+    dropOutCountTest = len(dropOutPosTest)
+    nonDropOutCountTest = len(y_test) - dropOutCountTest
+
     dropOutPos, nondropOutPos = getDropOutPosition(y_train)
     dropOutCount = len(dropOutPos)
     nonDropOutCount = len(y_train) - dropOutCount
     needCloneCount = nonDropOutCount - dropOutCount
+
+    print("****************************************")
+    print("Test Part")
+    print("----------------------------")
+    print("Total records: " + str(len(y_test)))
+    print("Drop records: " + str(dropOutCountTest))
+    print("Non-drop records: " + str(nonDropOutCountTest))
+    print("----------------------------")
+    print("----------------------------")
+    print("Training Part")
+    print("----------------------------")
     print("Before cloned data:")
-    print("dropOutCount: " + str(dropOutCount))
-    print("nonDropOutCount: " + str(nonDropOutCount))
+    print("Total records: " + str(len(y_train)))
+    print("Drop records: " + str(dropOutCount))
+    print("Non-drop records: " + str(nonDropOutCount))
     # From position -> we get list of X and y of dropout students to clone
     X_train_dropout = np.zeros(shape=(needCloneCount,18))
     y_train_dropout = np.zeros(shape=(needCloneCount,))
@@ -343,12 +374,16 @@ def clonedData(X_train, X_test, y_train, y_test, target_names, dataPath, runType
     X_train = np.concatenate((X_train, X_train_dropout), axis=0)
     y_train = np.concatenate((y_train, y_train_dropout), axis=0)
 
+    print("----------------------------")
     print("After cloned data:")
     dropOutPos, nondropOutPos = getDropOutPosition(y_train)
     dropOutCount = len(dropOutPos)
     nonDropOutCount = len(y_train) - dropOutCount
-    print("dropOutCount: " + str(dropOutCount))
-    print("nonDropOutCount: " + str(nonDropOutCount))
+    print("Total records: " + str(len(y_train)))
+    print("Drop records: " + str(dropOutCount))
+    print("Non-drop records: " + str(nonDropOutCount))
+    print("----------------------------")
+    print("****************************************")
 
     return classifiers(X_train, X_test, y_train, y_test, target_names, dataPath, runType, dataPart, needRebuild)
 
@@ -395,7 +430,7 @@ def samesizecluster(D):
     return xtoc
 
 def cluster(X, k, needSameSize, needShowGraph):
-    k_means = KMeans(init='k-means++', n_clusters=k, n_init=10)
+    k_means = KMeans(init='k-means++', n_clusters=k, n_init=20)
     k_means.fit(X)
     labels = k_means.labels_
     centroids = k_means.cluster_centers_
@@ -408,12 +443,14 @@ def cluster(X, k, needSameSize, needShowGraph):
         sameSizeLabels = samesizecluster(distances)
         print "Samesizecluster sizes:", np.bincount(sameSizeLabels)
     else:
+        for i in range(0, len(labels)):
+            labels[i] = labels[i] + 1
         sameSizeLabels = labels
 
     if needShowGraph:
         # Show on graphs
-        for i in range(estimate_cluster):
-            ds = X_train_non_drop[np.where(labels==i)]
+        for i in range(0, k):
+            ds = X[np.where(sameSizeLabels==i)]
             # plot the data observations
             plt.plot(ds[:,0],ds[:,1],'o')
             # plot the centroids
@@ -421,6 +458,8 @@ def cluster(X, k, needSameSize, needShowGraph):
             # make the centroid x's bigger
             plt.setp(lines,ms=15.0)
             plt.setp(lines,mew=2.0)
+        plt.title('KMeans')
+        plt.grid(True)
         plt.show()
 
     return sameSizeLabels
@@ -442,10 +481,14 @@ def buildReportDataFrame():
     today = datetime.date.today()
     workbook = xlsxwriter.Workbook('report_' + today.strftime('%Y%m%d') + '.xlsx')
 
+    generateAVGResult()
+
     fillDataForReportFile(workbook, 1, names, runTypes, preprocessTypes, showTypes, alphabetList, results1)
     fillDataForReportFile(workbook, 2, names, runTypes, preprocessTypes, showTypes, alphabetList, results2)
     fillDataForReportFile(workbook, 3, names, runTypes, preprocessTypes, showTypes, alphabetList, results3)
     fillDataForReportFile(workbook, 4, names, runTypes, preprocessTypes, showTypes, alphabetList, results4)
+
+    fillDataForReportFile(workbook, 5, names, runTypes, preprocessTypes, showTypes, alphabetList, resultsAvg)
 
     workbook.close()
 
@@ -493,7 +536,7 @@ def fillDataForReportFile(workbook, i, names, runTypes, preprocessTypes, showTyp
         worksheet.merge_range("A%d:A%d" % (count, count + 2), runType, merge_format)
         count += 3
         for preprocessType in preprocessTypes:
-            worksheet.set_row(countTemp - 1, 250)
+            worksheet.set_row(countTemp - 1, 200)
             worksheet.write("B%d" % countTemp, preprocessType, merge_format)
             countTemp += 1
 
@@ -544,3 +587,51 @@ def getResultType(clf_descr, i, title):
         return 10, getImagePath(Paths.data_avg, "cluster", i, title)
     elif "linear" in clf_descr and "cluster" in clf_descr:
         return 11, getImagePath(Paths.data_linear, "cluster", i, title)
+
+def reportMissingData():
+    print("Missing Data Report: ")
+    dataFUV2 = []
+    if os.path.exists(Paths.fu_v2):
+        dataFUV2 = pd.read_csv(Paths.fu_v2, sep=",", encoding='utf-8', low_memory=False)
+
+    print(dataFUV2.isnull().sum())
+
+def reportUnbalanceData():
+    print("Unbalanced Data Report: ")
+
+    dataFUV2 = []
+    if os.path.exists(Paths.fu_v2):
+        dataFUV2 = pd.read_csv(Paths.fu_v2, sep=",", encoding='utf-8', low_memory=False)
+
+    showUniqueClass(dataFUV2, 'DropOut (group)')
+
+def showUniqueClass(data, columnName):
+    tempData = data[columnName]
+    items, freq = itemfreq(tempData)
+    print('Total Item: ' + str(len(tempData)))
+    for i in range(0, len(items)):
+        print('Class name: ' + str(items[i]) + ' | Instances: ' + str(freq[i]))
+
+def showClusterResult(data):
+    items, freq = itemfreq(data)
+    for i in range(0, len(items)):
+        print('Class name: ' + str(items[i]) + ' | Instances: ' + str(freq[i]))
+
+def generateAVGResult():
+    del resultsAvg[:]
+
+    for i in range(0, len(results1)):
+        result1 = results1[i]
+        result2 = results2[i]
+        result3 = results3[i]
+        result4 = results4[i]
+
+        for j in range(0, len(result1)):
+            resultAvg = []
+            # print('-------------AVG')
+            avgMatrix = np.mean( np.array([ result1[j][1], result2[j][1], result3[j][1], result4[j][1] ]), axis=0, dtype=np.int32)
+            # print(avgMatrix)
+
+            temp = (result1[j][0], avgMatrix, result1[j][2])
+            resultAvg.append(temp)
+            resultsAvg.append(resultAvg)
